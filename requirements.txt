@@ -1,0 +1,22 @@
+# Servidor y API
+fastapi
+uvicorn
+python-dotenv
+
+# Motores de IA y LangChain (Actualizado para Gemini)
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-openai
+
+# Procesamiento de Documentos y Vectores
+pypdf
+faiss-cpu
+tiktoken
+
+# Utilidades
+langdetect
+sqlite-utils
+python-telegram-bot

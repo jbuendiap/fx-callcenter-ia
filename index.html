@@ -1,24 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Asesoría Sebastián</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asesoría Exclusiva | Fondo de Interés Compuesto</title>
     <style>
-        body { background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        .btn { width: 100px; height: 100px; border-radius: 50%; background: #7c4dff; border: none; cursor: pointer; font-size: 30px; }
+        /* Estilos Generales */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Tarjeta Central */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 350px;
+            width: 90%;
+        }
+
+        h1 { font-size: 22px; margin-bottom: 8px; font-weight: 600; }
+        p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin-bottom: 30px; }
+
+        /* Botón de Acción */
+        .vapi-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c4dff 0%, #4411db 100%);
+            border: none;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: 0 10px 20px rgba(124, 77, 255, 0.3);
+        }
+
+        .vapi-btn:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(124, 77, 255, 0.5); }
+
+        /* Estado Activo (Cuando Sebastián habla) */
+        .vapi-btn.active {
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red 1.5s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        #status-text { margin-top: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #818cf8; }
     </style>
 </head>
 <body>
-    <h1>Hablá con Sebastián</h1>
-    <button id="vapi-btn" class="btn" onclick="toggleCall()">▶️</button>
+
+    <div class="card">
+        <h1>Hablá con Sebastián</h1>
+        <p>Tu asesor senior en Interés Compuesto. Hacé clic abajo para iniciar la consulta en tiempo real.</p>
+
+        <button id="vapi-button" class="vapi-btn" onclick="toggleCall()">
+            <svg id="icon" width="50" height="50" viewBox="0 0 24 24" fill="white">
+                <path d="M8 5v14l11-7z"/> </svg>
+        </button>
+        
+        <div id="status-text">DISPONIBLE AHORA</div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/index.js"></script>
     <script>
-      const vapi = new Vapi('TU_PUBLIC_KEY_AQUI'); // Poné la Key de tu captura c2737b
-      let active = false;
-      function toggleCall() {
-        if (!active) { vapi.start('ID_DE_SEBASTIAN'); active = true; document.getElementById('vapi-btn').innerText = '⏹️'; }
-        else { vapi.stop(); active = false; document.getElementById('vapi-btn').innerText = '▶️'; }
-      }
+        // REEMPLAZÁ CON TUS DATOS DE VAPI
+        const vapi = new Vapi('TU_PUBLIC_KEY_AQUI'); 
+        const assistantId = 'ID_DE_SEBASTIAN';
+        
+        let isActive = false;
+
+        function toggleCall() {
+            const btn = document.getElementById('vapi-button');
+            const icon = document.getElementById('icon');
+            const status = document.getElementById('status-text');
+
+            if (!isActive) {
+                vapi.start(assistantId);
+                btn.classList.add('active');
+                icon.innerHTML = '<path d="M6 6h12v12H6z"/>'; // Cambia a icono Stop
+                status.innerText = "EN LLAMADA...";
+                status.style.color = "#ef4444";
+                isActive = true;
+            } else {
+                vapi.stop();
+                resetUI();
+            }
+        }
+
+        function resetUI() {
+            const btn = document.getElementById('vapi-button');
+            const icon = document.getElementById('icon');
+            const status = document.getElementById('status-text');
+            
+            btn.classList.remove('active');
+            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            status.innerText = "DISPONIBLE AHORA";
+            status.style.color = "#818cf8";
+            isActive = false;
+        }
+
+        vapi.on('call-end', resetUI);
     </script>
 </body>
 </html>

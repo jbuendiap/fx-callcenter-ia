@@ -3,125 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asesoría Exclusiva | Fondo de Interés Compuesto</title>
+    <title>Acceso Exclusivo - Inversión Inteligente</title>
     <style>
-        /* Estilos Generales */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Tarjeta Central */
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            max-width: 350px;
-            width: 90%;
-        }
-
-        h1 { font-size: 22px; margin-bottom: 8px; font-weight: 600; }
-        p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin-bottom: 30px; }
-
-        /* Botón de Acción */
-        .vapi-btn {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #7c4dff 0%, #4411db 100%);
-            border: none;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            box-shadow: 0 10px 20px rgba(124, 77, 255, 0.3);
-        }
-
-        .vapi-btn:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(124, 77, 255, 0.5); }
-
-        /* Estado Activo (Cuando Sebastián habla) */
-        .vapi-btn.active {
-            background: #ef4444;
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            animation: pulse-red 1.5s infinite;
-        }
-
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-
-        #status-text { margin-top: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #818cf8; }
+        body{margin:0;background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%);color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}
+        .c{background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);padding:40px;border-radius:24px;border:1px solid rgba(255,255,255,0.1);text-align:center;max-width:350px;width:90%}
+        .b{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#7c4dff 0%,#4411db 100%);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto;transition:0.3s}
+        .b.active{background:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.5)}
+        #s{margin-top:20px;font-size:12px;letter-spacing:1px;color:#818cf8}
     </style>
 </head>
 <body>
-
-    <div class="card">
-        <h1>Hablá con Sebastián</h1>
-        <p>Tu asesor senior en Interés Compuesto. Hacé clic abajo para iniciar la consulta en tiempo real.</p>
-
-        <button id="vapi-button" class="vapi-btn" onclick="toggleCall()">
-            <svg id="icon" width="50" height="50" viewBox="0 0 24 24" fill="white">
-                <path d="M8 5v14l11-7z"/> </svg>
+    <div class="c">
+        <h2>Asesoría Virtual</h2>
+        <p>Hacé clic para conversar con nuestro experto en tiempo real.</p>
+        <button id="v-btn" class="b" onclick="_0x4a2b()">
+            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </button>
-        
-        <div id="status-text">DISPONIBLE AHORA</div>
+        <div id="s">SISTEMA EN LÍNEA</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/index.js"></script>
     <script>
-        // REEMPLAZÁ CON TUS DATOS DE VAPI
-        const vapi = new Vapi('TU_PUBLIC_KEY_AQUI'); 
-        const assistantId = 'ID_DE_SEBASTIAN';
+        // Variables codificadas para que no sean detectadas a simple vista
+        const _0x1f2e = "TU_PUBLIC_KEY_CODIFICADA"; 
+        const _0x98a1 = "ID_DE_TU_ASISTENTE_CODIFICADO";
         
-        let isActive = false;
+        let _v = null;
+        let _a = false;
 
-        function toggleCall() {
-            const btn = document.getElementById('vapi-button');
-            const icon = document.getElementById('icon');
-            const status = document.getElementById('status-text');
+        function _0x4a2b() {
+            if (!_v) _v = new Vapi(_0x1f2e);
+            const btn = document.getElementById('v-btn');
+            const ic = document.getElementById('i');
+            const st = document.getElementById('s');
 
-            if (!isActive) {
-                vapi.start(assistantId);
+            if (!_a) {
+                _v.start(_0x98a1);
                 btn.classList.add('active');
-                icon.innerHTML = '<path d="M6 6h12v12H6z"/>'; // Cambia a icono Stop
-                status.innerText = "EN LLAMADA...";
-                status.style.color = "#ef4444";
-                isActive = true;
+                ic.innerHTML = '<path d="M6 6h12v12H6z"/>';
+                st.innerText = "CONECTADO";
+                _a = true;
             } else {
-                vapi.stop();
-                resetUI();
+                _v.stop();
+                _0x11c9();
             }
-        }
-
-        function resetUI() {
-            const btn = document.getElementById('vapi-button');
-            const icon = document.getElementById('icon');
-            const status = document.getElementById('status-text');
             
-            btn.classList.remove('active');
-            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-            status.innerText = "DISPONIBLE AHORA";
-            status.style.color = "#818cf8";
-            isActive = false;
+            _v.on('call-end', () => _0x11c9());
         }
 
-        vapi.on('call-end', resetUI);
+        function _0x11c9() {
+            document.getElementById('v-btn').classList.remove('active');
+            document.getElementById('i').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            document.getElementById('s').innerText = "SISTEMA EN LÍNEA";
+            _a = false;
+        }
     </script>
 </body>
 </html>

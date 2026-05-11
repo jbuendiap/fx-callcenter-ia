@@ -96,7 +96,7 @@ def process_message(user_id, message, country_code="default"):
         )
 
         system_prompt = f"""
-        PERSONALIDAD: Eres Juan Esteban, experto en Forex. 
+        PERSONALIDAD: Eres experto en Forex he inversiones. 
         TONO: Tienes acento {style['acento']}. {style['jerga']}
         
         TAREA: Convence al cliente de la oportunidad de inversión sin sonar desesperado.

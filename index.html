@@ -16,47 +16,54 @@
     <div class="c">
         <h2>Asesoría Virtual</h2>
         <p>Hacé clic para conversar con nuestro experto en tiempo real.</p>
-        <button id="v-btn" class="b" onclick="_0x4a2b()">
-            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        <button id="v-btn" class="b" onclick="toggleCall()">
+            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white"><path id="icon-path" d="M8 5v14l11-7z"/></svg>
         </button>
         <div id="s">SISTEMA EN LÍNEA</div>
     </div>
 
+    <!-- SDK de Vapi -->
     <script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/index.js"></script>
+    
     <script>
-        // Variables codificadas para que no sean detectadas a simple vista
-        const _0x1f2e = "208346ec-f846-490c-a4cd-d61837c2bcf5"; 
-        const _0x98a1 = "80ed7a3e-03a7-4677-a8a2-46077be73a05";
-        
-        let _v = null;
-        let _a = false;
+        // Credenciales validadas según image_d44c36.jpg e image_d44ff4.jpg
+        const PUBLIC_KEY = "208346ec-f846-490c-a4cd-d61837c2bcf5"; 
+        const ASSISTANT_ID = "80ed7a3e-03a7-4677-a8a2-46077be73a05";
 
-        function _0x4a2b() {
-            if (!_v) _v = new Vapi(_0x1f2e);
-            const btn = document.getElementById('v-btn');
-            const ic = document.getElementById('i');
-            const st = document.getElementById('s');
+        const vapi = new Vapi(PUBLIC_KEY);
+        let isCalling = false;
 
-            if (!_a) {
-                _v.start(_0x98a1);
-                btn.classList.add('active');
-                ic.innerHTML = '<path d="M6 6h12v12H6z"/>';
-                st.innerText = "CONECTADO";
-                _a = true;
+        const btn = document.getElementById('v-btn');
+        const path = document.getElementById('icon-path');
+        const status = document.getElementById('s');
+
+        function toggleCall() {
+            if (!isCalling) {
+                vapi.start(ASSISTANT_ID);
             } else {
-                _v.stop();
-                _0x11c9();
+                vapi.stop();
             }
-            
-            _v.on('call-end', () => _0x11c9());
         }
 
-        function _0x11c9() {
-            document.getElementById('v-btn').classList.remove('active');
-            document.getElementById('i').innerHTML = '<path d="M8 5v14l11-7z"/>';
-            document.getElementById('s').innerText = "SISTEMA EN LÍNEA";
-            _a = false;
-        }
+        vapi.on('call-start', () => {
+            isCalling = true;
+            btn.classList.add('active');
+            path.setAttribute('d', 'M6 6h12v12H6z'); // Icono de Stop
+            status.innerText = "CONECTADO";
+        });
+
+        vapi.on('call-end', () => {
+            isCalling = false;
+            btn.classList.remove('active');
+            path.setAttribute('d', 'M8 5v14l11-7z'); // Icono de Play
+            status.innerText = "SISTEMA EN LÍNEA";
+        });
+
+        // Captura de errores para diagnóstico
+        vapi.on('error', (e) => {
+            console.error('Vapi Error:', e);
+            alert("Error de conexión. Revisa la consola.");
+        });
     </script>
 </body>
 </html>

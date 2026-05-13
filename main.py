@@ -8,8 +8,8 @@ import json
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 
-# Librerías de Google Generative AI
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+# --- MIGRACIÓN A OPENAI ---
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
@@ -22,13 +22,13 @@ DetectorFactory.seed = 0
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-app = FastAPI(title="Forex AI Agent - Gemini Powered")
+app = FastAPI(title="Forex AI Agent - OpenAI Powered")
 
 # --- CONFIGURACIÓN DE RUTAS ---
 DOCUMENTS_DIR = "documents"
 DATABASE = "memory.db"
 
-# --- ESTRATEGIA DE ACENTOS POR PAÍS ---
+# --- ESTRATEGIA DE ACENTOS ---
 COUNTRY_ADAPTATION = {
     "ar": {"acento": "argentino", "jerga": "Usa 'plata', 'che', 'vos'. Sé directo y seguro."},
     "mx": {"acento": "mexicano", "jerga": "Usa 'lana', 'platicar', 'ahorita'. Sé muy cordial."},
@@ -40,7 +40,7 @@ COUNTRY_ADAPTATION = {
 vector_db = None
 index_lock = threading.Lock()
 
-# ---------------- BASE DE DATOS (Memoria Local) ----------------
+# ---------------- BASE DE DATOS ----------------
 def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -70,7 +70,7 @@ def get_history(user_id, limit=4):
     rows.reverse()
     return [HumanMessage(content=m) if r == "user" else AIMessage(content=m) for r, m in rows]
 
-# ---------------- MOTOR GEMINI 1.5 FLASH ----------------
+# ---------------- MOTOR OPENAI ----------------
 def process_message(user_id, message, country_code="default"):
     try:
         # 1. Tono y acento
@@ -88,22 +88,22 @@ def process_message(user_id, message, country_code="default"):
                 docs = vector_db.similarity_search(message, k=2)
                 contexto = "\n".join([d.page_content for d in docs])
 
-        # 3. Configuración Gemini
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+        # 3. Configuración OpenAI (Usando tu saldo activo)
+        llm = ChatOpenAI(
+            model="gpt-4o-mini",
             temperature=0.6,
-            max_output_tokens=100
+            max_tokens=80
         )
 
         system_prompt = f"""
-        PERSONALIDAD: Eres experto en Forex he inversiones. 
+        PERSONALIDAD: Eres Elena, experta en Forex e inversiones. 
         TONO: Tienes acento {style['acento']}. {style['jerga']}
         
-        TAREA: Convence al cliente de la oportunidad de inversión sin sonar desesperado.
-        REGLA DE ORO: Máximo 20 palabras por respuesta. Usa el CONTEXTO para dar datos reales.
+        TAREA: Convence al cliente de la oportunidad de inversión sin sonar desesperada.
+        REGLA DE ORO: Sé breve (máximo 20 palabras). Responde siempre en el idioma que te hablen.
 
-        CONTEXTO DE DOCUMENTOS:
-        {contexto if contexto else "Usa persuasión general en Forex basada en rentabilidad segura."}
+        CONTEXTO ESTRATÉGICO:
+        {contexto if contexto else "Usa persuasión general en Forex basada en rentabilidad segura y fondo de interés compuesto."}
         """
 
         history = get_history(user_id)
@@ -116,14 +116,16 @@ def process_message(user_id, message, country_code="default"):
         return response.content
 
     except Exception as e:
-        logging.error(f"Error en Gemini: {e}")
-        return "Disculpe, la señal está fallando un poco. ¿Qué me decía sobre la inversión?"
+        logging.error(f"Error en OpenAI: {e}")
+        return "Disculpe, la conexión está algo inestable. ¿Me repetía lo de su inversión?"
 
-# ---------------- INDEXACIÓN DE DOCUMENTOS ----------------
+# ---------------- INDEXACIÓN CON OPENAI ----------------
 def build_index():
     global vector_db
     try:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        # Usamos embeddings de OpenAI porque ya tienes saldo ahí
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        
         if not os.path.exists(DOCUMENTS_DIR): os.makedirs(DOCUMENTS_DIR)
         
         all_docs = []
@@ -133,13 +135,16 @@ def build_index():
                 all_docs.extend(loader.load())
         
         if all_docs:
-            splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
+            splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=50)
             chunks = splitter.split_documents(all_docs)
             with index_lock:
                 vector_db = FAISS.from_documents(chunks, embeddings)
-                logging.info("--- DOCUMENTOS INDEXADOS ---")
+                logging.info("--- DOCUMENTOS INDEXADOS CON OPENAI ---")
+        else:
+            logging.warning("No se encontraron PDFs en la carpeta 'documents'")
+            
     except Exception as e:
-        logging.error(f"Error indexando: {e}")
+        logging.error(f"Error indexando documentos: {e}")
 
 # ---------------- WEBHOOK PARA VAPI ----------------
 @app.post("/vapi-webhook")
@@ -152,19 +157,15 @@ async def vapi_webhook(request: Request):
             tc = message_data["toolCalls"][0]
             args = tc.get("function", {}).get("arguments", {})
             
-            # Manejo de argumentos si vienen como string
             if isinstance(args, str):
                 args = json.loads(args)
             
             query = args.get("query", "")
-            
-            # Obtener país del lead
             customer_info = message_data.get("customer", {})
             country = customer_info.get("country", "default").lower()
 
             respuesta = process_message("vapi_user", query, country_code=country)
             
-            # Formato exacto para que Vapi llene el campo 'result'
             return {
                 "results": [
                     {
@@ -182,11 +183,12 @@ async def vapi_webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     init_db()
+    # Ejecutar indexación al arrancar
     threading.Thread(target=build_index, daemon=True).start()
 
 @app.get("/")
 def health_check():
-    return {"status": "Vendedor Forex Activo", "project": "FX-CallCenter"}
+    return {"status": "Vendedor Forex Activo", "engine": "OpenAI GPT-4o-Mini"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

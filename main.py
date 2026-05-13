@@ -8,7 +8,7 @@ import json
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 
-# --- MIGRACIÓN A OPENAI ---
+# --- LIBRERÍAS DE OPENAI ---
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -40,7 +40,7 @@ COUNTRY_ADAPTATION = {
 vector_db = None
 index_lock = threading.Lock()
 
-# ---------------- BASE DE DATOS ----------------
+# ---------------- BASE DE DATOS (Memoria Local) ----------------
 def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -88,7 +88,7 @@ def process_message(user_id, message, country_code="default"):
                 docs = vector_db.similarity_search(message, k=2)
                 contexto = "\n".join([d.page_content for d in docs])
 
-        # 3. Configuración OpenAI (Usando tu saldo activo)
+        # 3. Configuración OpenAI
         llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.6,
@@ -100,10 +100,10 @@ def process_message(user_id, message, country_code="default"):
         TONO: Tienes acento {style['acento']}. {style['jerga']}
         
         TAREA: Convence al cliente de la oportunidad de inversión sin sonar desesperada.
-        REGLA DE ORO: Sé breve (máximo 20 palabras). Responde siempre en el idioma que te hablen.
+        REGLA DE ORO: Máximo 20 palabras por respuesta. Responde siempre en el idioma que te hablen.
 
         CONTEXTO ESTRATÉGICO:
-        {contexto if contexto else "Usa persuasión general en Forex basada en rentabilidad segura y fondo de interés compuesto."}
+        {contexto if contexto else "Usa persuasión general en Forex basada en rentabilidad segura."}
         """
 
         history = get_history(user_id)
@@ -117,15 +117,13 @@ def process_message(user_id, message, country_code="default"):
 
     except Exception as e:
         logging.error(f"Error en OpenAI: {e}")
-        return "Disculpe, la conexión está algo inestable. ¿Me repetía lo de su inversión?"
+        return "Disculpe, la señal está fallando un poco. ¿Qué me decía sobre la inversión?"
 
-# ---------------- INDEXACIÓN CON OPENAI ----------------
+# ---------------- INDEXACIÓN DE DOCUMENTOS ----------------
 def build_index():
     global vector_db
     try:
-        # Usamos embeddings de OpenAI porque ya tienes saldo ahí
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        
         if not os.path.exists(DOCUMENTS_DIR): os.makedirs(DOCUMENTS_DIR)
         
         all_docs = []
@@ -140,11 +138,8 @@ def build_index():
             with index_lock:
                 vector_db = FAISS.from_documents(chunks, embeddings)
                 logging.info("--- DOCUMENTOS INDEXADOS CON OPENAI ---")
-        else:
-            logging.warning("No se encontraron PDFs en la carpeta 'documents'")
-            
     except Exception as e:
-        logging.error(f"Error indexando documentos: {e}")
+        logging.error(f"Error indexando: {e}")
 
 # ---------------- WEBHOOK PARA VAPI ----------------
 @app.post("/vapi-webhook")
@@ -166,6 +161,8 @@ async def vapi_webhook(request: Request):
 
             respuesta = process_message("vapi_user", query, country_code=country)
             
+            # --- MAPEO CRÍTICO PARA TU CONFIGURACIÓN DE VAPI ---
+            # Esto coincide con la Variable "results" de tu imagen image_732725.jpg
             return {
                 "results": [
                     {
@@ -183,7 +180,6 @@ async def vapi_webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     init_db()
-    # Ejecutar indexación al arrancar
     threading.Thread(target=build_index, daemon=True).start()
 
 @app.get("/")

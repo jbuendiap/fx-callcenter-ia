@@ -21,6 +21,7 @@ from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 0
 load_dotenv()
 
+# Configuración de Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 app = FastAPI(title="Forex AI Agent - OpenAI Powered")
 
@@ -42,7 +43,8 @@ index_lock = threading.Lock()
 
 # ---------------- BASE DE DATOS (Memoria Local) ----------------
 def init_db():
-    conn = sqlite3.connect(DATABASE)
+    # check_same_thread=False es vital para FastAPI
+    conn = sqlite3.connect(DATABASE, check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS conversations (
@@ -55,14 +57,14 @@ def init_db():
     conn.close()
 
 def save_message(user_id, role, message):
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO conversations (user_id, role, message) VALUES (?, ?, ?)", (user_id, role, message))
     conn.commit()
     conn.close()
 
 def get_history(user_id, limit=4):
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("SELECT role, message FROM conversations WHERE user_id=? ORDER BY id DESC LIMIT ?", (user_id, limit))
     rows = cursor.fetchall()
@@ -73,7 +75,7 @@ def get_history(user_id, limit=4):
 # ---------------- MOTOR OPENAI ----------------
 def process_message(user_id, message, country_code="default"):
     try:
-        # 1. Tono y acento
+        # 1. Determinación de tono
         lang = country_code if country_code != "default" else "es"
         try: 
             if country_code == "default": lang = detect(message)
@@ -81,14 +83,14 @@ def process_message(user_id, message, country_code="default"):
 
         style = COUNTRY_ADAPTATION.get(lang, COUNTRY_ADAPTATION["default"])
 
-        # 2. RAG: Buscar info en PDFs
+        # 2. RAG: Búsqueda Semántica
         contexto = ""
         if vector_db is not None:
             with index_lock:
                 docs = vector_db.similarity_search(message, k=2)
                 contexto = "\n".join([d.page_content for d in docs])
 
-        # 3. Configuración OpenAI
+        # 3. LLM (Usa automáticamente la variable OPENAI_API_KEY)
         llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.6,
@@ -99,7 +101,7 @@ def process_message(user_id, message, country_code="default"):
         PERSONALIDAD: Eres Elena, experta en Forex e inversiones. 
         TONO: Tienes acento {style['acento']}. {style['jerga']}
         
-        TAREA: Convence al cliente de la oportunidad de inversión sin sonar desesperada.
+        TAREA: Convence al cliente de la oportunidad de inversión de forma profesional.
         REGLA DE ORO: Máximo 20 palabras por respuesta. Responde siempre en el idioma que te hablen.
 
         CONTEXTO ESTRATÉGICO:
@@ -110,26 +112,33 @@ def process_message(user_id, message, country_code="default"):
         messages = [SystemMessage(content=system_prompt), *history, HumanMessage(content=message)]
         
         response = llm.invoke(messages)
+        
+        # Persistencia
         save_message(user_id, "user", message)
         save_message(user_id, "assistant", response.content)
         
         return response.content
 
     except Exception as e:
-        logging.error(f"Error en OpenAI: {e}")
+        logging.error(f"Error en proceso OpenAI: {e}")
         return "Disculpe, la señal está fallando un poco. ¿Qué me decía sobre la inversión?"
 
 # ---------------- INDEXACIÓN DE DOCUMENTOS ----------------
 def build_index():
     global vector_db
     try:
+        if not os.getenv("OPENAI_API_KEY"):
+            logging.error("CRÍTICO: No se encontró OPENAI_API_KEY en las variables de entorno.")
+            return
+
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         if not os.path.exists(DOCUMENTS_DIR): os.makedirs(DOCUMENTS_DIR)
         
         all_docs = []
         for file in os.listdir(DOCUMENTS_DIR):
             if file.endswith(".pdf"):
-                loader = PyPDFLoader(os.path.join(DOCUMENTS_DIR, file))
+                path = os.path.join(DOCUMENTS_DIR, file)
+                loader = PyPDFLoader(path)
                 all_docs.extend(loader.load())
         
         if all_docs:
@@ -137,9 +146,12 @@ def build_index():
             chunks = splitter.split_documents(all_docs)
             with index_lock:
                 vector_db = FAISS.from_documents(chunks, embeddings)
-                logging.info("--- DOCUMENTOS INDEXADOS CON OPENAI ---")
+                logging.info("--- DOCUMENTOS INDEXADOS EXITOSAMENTE ---")
+        else:
+            logging.info("No se encontraron documentos PDF para indexar.")
+
     except Exception as e:
-        logging.error(f"Error indexando: {e}")
+        logging.error(f"Error indexando documentos: {e}")
 
 # ---------------- WEBHOOK PARA VAPI ----------------
 @app.post("/vapi-webhook")
@@ -148,12 +160,18 @@ async def vapi_webhook(request: Request):
         data = await request.json()
         message_data = data.get("message", {})
 
+        # Manejo de Tool Calls de Vapi
         if "toolCalls" in message_data:
             tc = message_data["toolCalls"][0]
-            args = tc.get("function", {}).get("arguments", {})
+            func = tc.get("function", {})
+            args = func.get("arguments", {})
             
+            # Asegurar que args sea un diccionario
             if isinstance(args, str):
-                args = json.loads(args)
+                try:
+                    args = json.loads(args)
+                except:
+                    args = {"query": args}
             
             query = args.get("query", "")
             customer_info = message_data.get("customer", {})
@@ -161,8 +179,6 @@ async def vapi_webhook(request: Request):
 
             respuesta = process_message("vapi_user", query, country_code=country)
             
-            # --- MAPEO CRÍTICO PARA TU CONFIGURACIÓN DE VAPI ---
-            # Esto coincide con la Variable "results" de tu imagen image_732725.jpg
             return {
                 "results": [
                     {
@@ -172,7 +188,7 @@ async def vapi_webhook(request: Request):
                 ]
             }
     except Exception as e:
-        logging.error(f"Error en Webhook: {e}")
+        logging.error(f"Error en Webhook Vapi: {e}")
         return {"error": str(e)}
     
     return {"ok": True}
@@ -180,12 +196,18 @@ async def vapi_webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     init_db()
+    # Ejecutar indexación en hilo separado para no bloquear el inicio
     threading.Thread(target=build_index, daemon=True).start()
 
 @app.get("/")
 def health_check():
-    return {"status": "Vendedor Forex Activo", "engine": "OpenAI GPT-4o-Mini"}
+    return {
+        "status": "Vendedor Forex Activo", 
+        "engine": "OpenAI GPT-4o-Mini",
+        "rag_ready": vector_db is not None
+    }
 
 if __name__ == "__main__":
+    # Railway asigna el puerto dinámicamente
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)

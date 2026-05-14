@@ -21,15 +21,15 @@ from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 0
 load_dotenv()
 
-# Configuración de Logging
+# Configuración de Logging profesional
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 app = FastAPI(title="Forex AI Agent - OpenAI Powered")
 
 # --- CONFIGURACIÓN DE RUTAS ---
 DOCUMENTS_DIR = "documents"
-DATABASE = "memory.db"
+DATABASE = "forex_memory.db" # Nombre específico para evitar conflictos
 
-# --- ESTRATEGIA DE ACENTOS ---
+# --- ESTRATEGIA DE ACENTOS (Persuasión de Ventas) ---
 COUNTRY_ADAPTATION = {
     "ar": {"acento": "argentino", "jerga": "Usa 'plata', 'che', 'vos'. Sé directo y seguro."},
     "mx": {"acento": "mexicano", "jerga": "Usa 'lana', 'platicar', 'ahorita'. Sé muy cordial."},
@@ -43,7 +43,6 @@ index_lock = threading.Lock()
 
 # ---------------- BASE DE DATOS (Memoria Local) ----------------
 def init_db():
-    # check_same_thread=False es vital para FastAPI
     conn = sqlite3.connect(DATABASE, check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("""
@@ -75,7 +74,7 @@ def get_history(user_id, limit=4):
 # ---------------- MOTOR OPENAI ----------------
 def process_message(user_id, message, country_code="default"):
     try:
-        # 1. Determinación de tono
+        # Detección de tono
         lang = country_code if country_code != "default" else "es"
         try: 
             if country_code == "default": lang = detect(message)
@@ -83,29 +82,29 @@ def process_message(user_id, message, country_code="default"):
 
         style = COUNTRY_ADAPTATION.get(lang, COUNTRY_ADAPTATION["default"])
 
-        # 2. RAG: Búsqueda Semántica
+        # RAG: Búsqueda Semántica
         contexto = ""
         if vector_db is not None:
             with index_lock:
                 docs = vector_db.similarity_search(message, k=2)
                 contexto = "\n".join([d.page_content for d in docs])
 
-        # 3. LLM (Usa automáticamente la variable OPENAI_API_KEY)
+        # LLM (Busca automáticamente OPENAI_API_KEY)
         llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.6,
-            max_tokens=80
+            max_tokens=85 # Un poco más de margen para fluidez
         )
 
         system_prompt = f"""
-        PERSONALIDAD: Eres Elena, experta en Forex e inversiones. 
+        PERSONALIDAD: Eres Elena, experta en Forex e inversiones de alto nivel. 
         TONO: Tienes acento {style['acento']}. {style['jerga']}
         
-        TAREA: Convence al cliente de la oportunidad de inversión de forma profesional.
-        REGLA DE ORO: Máximo 20 palabras por respuesta. Responde siempre en el idioma que te hablen.
+        TAREA: Convence al cliente de la oportunidad de inversión de forma profesional y magnética.
+        REGLA DE ORO: Máximo 20 palabras. Responde en el idioma que te hablen.
 
         CONTEXTO ESTRATÉGICO:
-        {contexto if contexto else "Usa persuasión general en Forex basada en rentabilidad segura."}
+        {contexto if contexto else "Usa persuasión general sobre la volatilidad del mercado y rentabilidad."}
         """
 
         history = get_history(user_id)
@@ -113,32 +112,27 @@ def process_message(user_id, message, country_code="default"):
         
         response = llm.invoke(messages)
         
-        # Persistencia
         save_message(user_id, "user", message)
         save_message(user_id, "assistant", response.content)
         
         return response.content
 
     except Exception as e:
-        logging.error(f"Error en proceso OpenAI: {e}")
-        return "Disculpe, la señal está fallando un poco. ¿Qué me decía sobre la inversión?"
+        logging.error(f"Error OpenAI Forex: {e}")
+        return "El mercado está movido hoy. ¿Qué me decías sobre tu capital de inversión?"
 
-# ---------------- INDEXACIÓN DE DOCUMENTOS ----------------
+# ---------------- INDEXACIÓN ----------------
 def build_index():
     global vector_db
     try:
-        if not os.getenv("OPENAI_API_KEY"):
-            logging.error("CRÍTICO: No se encontró OPENAI_API_KEY en las variables de entorno.")
-            return
-
+        # OpenAIEmbeddings detecta automáticamente la llave
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         if not os.path.exists(DOCUMENTS_DIR): os.makedirs(DOCUMENTS_DIR)
         
         all_docs = []
         for file in os.listdir(DOCUMENTS_DIR):
             if file.endswith(".pdf"):
-                path = os.path.join(DOCUMENTS_DIR, file)
-                loader = PyPDFLoader(path)
+                loader = PyPDFLoader(os.path.join(DOCUMENTS_DIR, file))
                 all_docs.extend(loader.load())
         
         if all_docs:
@@ -146,38 +140,33 @@ def build_index():
             chunks = splitter.split_documents(all_docs)
             with index_lock:
                 vector_db = FAISS.from_documents(chunks, embeddings)
-                logging.info("--- DOCUMENTOS INDEXADOS EXITOSAMENTE ---")
-        else:
-            logging.info("No se encontraron documentos PDF para indexar.")
-
+                logging.info("--- DOCUMENTOS DE FOREX INDEXADOS ---")
     except Exception as e:
-        logging.error(f"Error indexando documentos: {e}")
+        logging.error(f"Error indexando PDFs: {e}")
 
-# ---------------- WEBHOOK PARA VAPI ----------------
+# ---------------- WEBHOOK VAPI ----------------
 @app.post("/vapi-webhook")
 async def vapi_webhook(request: Request):
     try:
         data = await request.json()
         message_data = data.get("message", {})
 
-        # Manejo de Tool Calls de Vapi
         if "toolCalls" in message_data:
             tc = message_data["toolCalls"][0]
             func = tc.get("function", {})
             args = func.get("arguments", {})
             
-            # Asegurar que args sea un diccionario
             if isinstance(args, str):
-                try:
-                    args = json.loads(args)
-                except:
-                    args = {"query": args}
+                try: args = json.loads(args)
+                except: args = {"query": args}
             
             query = args.get("query", "")
+            if not query: query = "Hola" # Fallback para evitar errores
+            
             customer_info = message_data.get("customer", {})
             country = customer_info.get("country", "default").lower()
 
-            respuesta = process_message("vapi_user", query, country_code=country)
+            respuesta = process_message("vapi_forex_user", query, country_code=country)
             
             return {
                 "results": [
@@ -188,7 +177,7 @@ async def vapi_webhook(request: Request):
                 ]
             }
     except Exception as e:
-        logging.error(f"Error en Webhook Vapi: {e}")
+        logging.error(f"Error Webhook: {e}")
         return {"error": str(e)}
     
     return {"ok": True}
@@ -196,18 +185,12 @@ async def vapi_webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     init_db()
-    # Ejecutar indexación en hilo separado para no bloquear el inicio
     threading.Thread(target=build_index, daemon=True).start()
 
 @app.get("/")
 def health_check():
-    return {
-        "status": "Vendedor Forex Activo", 
-        "engine": "OpenAI GPT-4o-Mini",
-        "rag_ready": vector_db is not None
-    }
+    return {"status": "Elena Forex Online", "engine": "OpenAI Standard Key"}
 
 if __name__ == "__main__":
-    # Railway asigna el puerto dinámicamente
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)

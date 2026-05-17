@@ -1,116 +1,129 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Exclusivo - Inversión Inteligente</title>
-    <style>
-        body {
-            margin: 0;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            font-family: sans-serif;
-        }
-        .c {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            max-width: 350px;
-            width: 90%;
-        }
-        .b {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #7c4dff 0%, #4411db 100%);
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            transition: 0.3s;
-        }
-        .b.active {
-            background: #ef4444;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
-        }
-        #s {
-            margin-top: 20px;
-            font-size: 12px;
-            letter-spacing: 1px;
-            color: #818cf8;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceso Exclusivo - Inversión Inteligente</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+    .c {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      max-width: 350px;
+      width: 90%;
+    }
+    .b {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c4dff 0%, #4411db 100%);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      transition: 0.3s;
+    }
+    .b.active {
+      background: #ef4444;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+    #s {
+      margin-top: 20px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #818cf8;
+    }
+  </style>
 </head>
 <body>
-    <div class="c">
-        <h2>Asesoría Virtual</h2>
-        <p>Hacé clic para conversar con nuestro experto en tiempo real.</p>
-        <button id="v-btn" class="b" onclick="toggleCall()">
-            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white">
-                <path id="icon-path" d="M8 5v14l11-7z"/>
-            </svg>
-        </button>
-        <div id="s">SISTEMA EN LÍNEA</div>
-    </div>
+  <div class="c">
+    <h2>Asesoría Virtual</h2>
+    <p>Hacé clic para conversar con nuestro experto en tiempo real.</p>
 
-    <script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/index.js"></script>
-    
-    <script>
-        // Credenciales validadas
-        const PUBLIC_KEY = "208346ec-f846-490c-a4cd-d61837c2bcf5"; 
-        const ASSISTANT_ID = "80ed7a3e-03a7-4677-a8a2-46077be73a05";
+    <button id="v-btn" class="b" type="button" aria-label="Iniciar/Finalizar llamada">
+      <svg width="50" height="50" viewBox="0 0 24 24" fill="white">
+        <path id="icon-path" d="M8 5v14l11-7z" />
+      </svg>
+    </button>
 
-        // Inicialización segura del SDK según el objeto expuesto por el CDN
-        const vapi = typeof Vapi !== 'undefined' ? new Vapi(PUBLIC_KEY) : new VapiSDK(PUBLIC_KEY);
-        
-        let isCalling = false;
+    <div id="s">SISTEMA EN LÍNEA</div>
+  </div>
 
-        const btn = document.getElementById('v-btn');
-        const path = document.getElementById('icon-path');
-        const status = document.getElementById('s');
+  <!-- Web SDK (UMD) -->
+  <script src="https://unpkg.com/@vapi-ai/web/dist/index.umd.js"></script>
 
-        function toggleCall() {
-            if (!isCalling) {
-                // CORRECCIÓN: .start() requiere pasar el ID dentro de un objeto de configuración
-                vapi.start({
-                    assistantId: ASSISTANT_ID
-                });
-            } else {
-                vapi.stop();
-            }
+  <script>
+    // IMPORTANTE:
+    // - PUBLIC_KEY: se usa en frontend
+    // - ASSISTANT_ID: ID del asistente que vas a llamar
+    const PUBLIC_KEY = "208346ec-f846-490c-a4cd-d61837c2bcf5";
+    const ASSISTANT_ID = "80ed7a3e-03a7-4677-a8a2-46077be73a05";
+
+    const btn = document.getElementById("v-btn");
+    const path = document.getElementById("icon-path");
+    const status = document.getElementById("s");
+
+    let isCalling = false;
+
+    // Inicializa el cliente Vapi
+    const vapi = new Vapi(PUBLIC_KEY);
+
+    function setUIConnected(connected) {
+      isCalling = connected;
+
+      if (connected) {
+        btn.classList.add("active");
+        path.setAttribute("d", "M6 6h12v12H6z"); // Stop (cuadrado)
+        status.innerText = "CONECTADO";
+      } else {
+        btn.classList.remove("active");
+        path.setAttribute("d", "M8 5v14l11-7z"); // Play (triángulo)
+        status.innerText = "SISTEMA EN LÍNEA";
+      }
+    }
+
+    async function toggleCall() {
+      try {
+        if (!isCalling) {
+          status.innerText = "CONECTANDO...";
+          // Forma más compatible: pasar el assistantId como string
+          vapi.start(ASSISTANT_ID);
+        } else {
+          vapi.stop();
         }
+      } catch (e) {
+        console.error("Toggle error:", e);
+        status.innerText = "ERROR DE CONEXIÓN";
+        setUIConnected(false);
+      }
+    }
 
-        vapi.on('call-start', () => {
-            isCalling = true;
-            btn.classList.add('active');
-            path.setAttribute('d', 'M6 6h12v12H6z'); // Cambia a icono de Stop (Cuadrado)
-            status.innerText = "CONECTADO";
-        });
+    btn.addEventListener("click", toggleCall);
 
-        vapi.on('call-end', () => {
-            isCalling = false;
-            btn.classList.remove('active');
-            path.setAttribute('d', 'M8 5v14l11-7z'); // Cambia a icono de Play (Triángulo)
-            status.innerText = "SISTEMA EN LÍNEA";
-        });
+    vapi.on("call-start", () => setUIConnected(true));
 
-        // Captura de errores para diagnóstico sin romper la interfaz
-        vapi.on('error', (e) => {
-            console.error('Vapi Error:', e);
-            status.innerText = "ERROR DE CONEXIÓN";
-            btn.classList.remove('active');
-            path.setAttribute('d', 'M8 5v14l11-7z');
-            isCalling = false;
-        });
-    </script>
+    vapi.on("call-end", () => setUIConnected(false));
+
+    vapi.on("error", (e) => {
+      console.error("Vapi Error:", e);
+      status.innerText = "ERROR DE CONEXIÓN";
+      setUIConnected(false);
+    });
+  </script>
 </body>
 </html>

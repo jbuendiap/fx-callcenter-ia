@@ -5,11 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso Exclusivo - Inversión Inteligente</title>
     <style>
-        body{margin:0;background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%);color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}
-        .c{background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);padding:40px;border-radius:24px;border:1px solid rgba(255,255,255,0.1);text-align:center;max-width:350px;width:90%}
-        .b{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#7c4dff 0%,#4411db 100%);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto;transition:0.3s}
-        .b.active{background:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.5)}
-        #s{margin-top:20px;font-size:12px;letter-spacing:1px;color:#818cf8}
+        body {
+            margin: 0;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: sans-serif;
+        }
+        .c {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+        }
+        .b {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c4dff 0%, #4411db 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            transition: 0.3s;
+        }
+        .b.active {
+            background: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        #s {
+            margin-top: 20px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: #818cf8;
+        }
     </style>
 </head>
 <body>
@@ -17,20 +55,23 @@
         <h2>Asesoría Virtual</h2>
         <p>Hacé clic para conversar con nuestro experto en tiempo real.</p>
         <button id="v-btn" class="b" onclick="toggleCall()">
-            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white"><path id="icon-path" d="M8 5v14l11-7z"/></svg>
+            <svg id="i" width="50" height="50" viewBox="0 0 24 24" fill="white">
+                <path id="icon-path" d="M8 5v14l11-7z"/>
+            </svg>
         </button>
         <div id="s">SISTEMA EN LÍNEA</div>
     </div>
 
-    <!-- SDK de Vapi -->
     <script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/index.js"></script>
     
     <script>
-        // Credenciales validadas según image_d44c36.jpg e image_d44ff4.jpg
+        // Credenciales validadas
         const PUBLIC_KEY = "4c9a79f8-eefd-4e94-acf0-ab1303fffe91"; 
         const ASSISTANT_ID = "80ed7a3e-03a7-4677-a8a2-46077be73a05";
 
-        const vapi = new Vapi(PUBLIC_KEY);
+        // Inicialización segura del SDK según el objeto expuesto por el CDN
+        const vapi = typeof Vapi !== 'undefined' ? new Vapi(PUBLIC_KEY) : new VapiSDK(PUBLIC_KEY);
+        
         let isCalling = false;
 
         const btn = document.getElementById('v-btn');
@@ -39,7 +80,10 @@
 
         function toggleCall() {
             if (!isCalling) {
-                vapi.start(ASSISTANT_ID);
+                // CORRECCIÓN: .start() requiere pasar el ID dentro de un objeto de configuración
+                vapi.start({
+                    assistantId: ASSISTANT_ID
+                });
             } else {
                 vapi.stop();
             }
@@ -48,21 +92,24 @@
         vapi.on('call-start', () => {
             isCalling = true;
             btn.classList.add('active');
-            path.setAttribute('d', 'M6 6h12v12H6z'); // Icono de Stop
+            path.setAttribute('d', 'M6 6h12v12H6z'); // Cambia a icono de Stop (Cuadrado)
             status.innerText = "CONECTADO";
         });
 
         vapi.on('call-end', () => {
             isCalling = false;
             btn.classList.remove('active');
-            path.setAttribute('d', 'M8 5v14l11-7z'); // Icono de Play
+            path.setAttribute('d', 'M8 5v14l11-7z'); // Cambia a icono de Play (Triángulo)
             status.innerText = "SISTEMA EN LÍNEA";
         });
 
-        // Captura de errores para diagnóstico
+        // Captura de errores para diagnóstico sin romper la interfaz
         vapi.on('error', (e) => {
             console.error('Vapi Error:', e);
-            alert("Error de conexión. Revisa la consola.");
+            status.innerText = "ERROR DE CONEXIÓN";
+            btn.classList.remove('active');
+            path.setAttribute('d', 'M8 5v14l11-7z');
+            isCalling = false;
         });
     </script>
 </body>

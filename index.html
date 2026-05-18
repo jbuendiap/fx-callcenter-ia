@@ -64,8 +64,7 @@
     <div id="s">SISTEMA EN LÍNEA</div>
   </div>
 
-  <!-- Web SDK (UMD) -->
-  <script src="https://unpkg.com/@vapi-ai/web/dist/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/vapi-ai/html-script-tag@latest/dist/vapi-nb.js"></script>
 
   <script>
     // IMPORTANTE:
@@ -80,7 +79,7 @@
 
     let isCalling = false;
 
-    // Inicializa el cliente Vapi
+    // Inicializa el cliente Vapi sin errores globales
     const vapi = new Vapi(PUBLIC_KEY);
 
     function setUIConnected(connected) {
@@ -100,30 +99,4 @@
     async function toggleCall() {
       try {
         if (!isCalling) {
-          status.innerText = "CONECTANDO...";
-          // Forma más compatible: pasar el assistantId como string
-          vapi.start(ASSISTANT_ID);
-        } else {
-          vapi.stop();
-        }
-      } catch (e) {
-        console.error("Toggle error:", e);
-        status.innerText = "ERROR DE CONEXIÓN";
-        setUIConnected(false);
-      }
-    }
-
-    btn.addEventListener("click", toggleCall);
-
-    vapi.on("call-start", () => setUIConnected(true));
-
-    vapi.on("call-end", () => setUIConnected(false));
-
-    vapi.on("error", (e) => {
-      console.error("Vapi Error:", e);
-      status.innerText = "ERROR DE CONEXIÓN";
-      setUIConnected(false);
-    });
-  </script>
-</body>
-</html>
+          status.innerText
